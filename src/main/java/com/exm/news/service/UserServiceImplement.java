@@ -1,9 +1,6 @@
 package com.exm.news.service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.exm.news.customRepo.auth.LoginRepoImplement;
@@ -62,7 +59,7 @@ public class UserServiceImplement implements UserServiceInterfaces {
     @Autowired
     private LoginRepoImplement customLoginRepository;
 
-    public List<LoginUserDto> findLoginByEmailCus(String email){
+    public List<LoginUserDto> findLoginByEmailCus(String email) {
         List<Login> loginEmails = customLoginRepository.findLoginSameEmail(email);
 
         List<LoginUserDto> listt = loginEmails.stream()
@@ -103,8 +100,8 @@ public class UserServiceImplement implements UserServiceInterfaces {
     @Override
     public LoginResponse getUserToken() {
         UserAuth userAuth = (UserAuth) SecurityContextHolder.getContext().getAuthentication();
-        System.out.println("userAuth"+userAuth.toString());
-        if(userAuth == null) {
+        System.out.println("userAuth" + userAuth.toString());
+        if (userAuth == null) {
             throw new NoSuchElementException("user not found, cannot make token");
         }
 
@@ -112,16 +109,16 @@ public class UserServiceImplement implements UserServiceInterfaces {
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setToken(jwtToken);
         List<String> userRoles = userAuth.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                                .collect(Collectors.toList());
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
         return loginResponse;
     }
 
     @Override
-    public GeneralUserDto getMe(){
+    public GeneralUserDto getMe() {
         UserAuth userAuth = (UserAuth) SecurityContextHolder
                 .getContext().getAuthentication();
-        if(userAuth == null) {
+        if (userAuth == null) {
             throw new NoSuchElementException("User not found");
         }
         Login login = loginRepository.findLoginByEmail(userAuth.getEmail());
@@ -130,13 +127,41 @@ public class UserServiceImplement implements UserServiceInterfaces {
         return generalUserDto;
     }
 
+    @Override
+    public List<GeneralUserDto> generalUserDtoListByRoleEditor(){
+        List<User> usersList = userRepository.findByAuthorityNameRequestEditor();
+        return usersList.stream()
+                .map(user -> {
+                    GeneralUserDto generalUser = modelMapper.map(user, GeneralUserDto.class);
+                    Login login = loginRepository.findLoginById(user.getUserId());
+                    generalUser.setRole(setAuthorityToListAuthority(user.getAuthorities()));
+                    generalUser.setEmail(login.getEmail());
+                    return generalUser;
+                })
+                .toList();
+    }
+
+    @Override
+    public List<GeneralUserDto> generalUserDtoListByRoleRequestEditor(){
+        List<User> usersList = userRepository.findByAuthorityNameRequestEditor();
+        return usersList.stream()
+                .map(user -> {
+                    GeneralUserDto generalUser = modelMapper.map(user, GeneralUserDto.class);
+                    Login login = loginRepository.findLoginById(user.getUserId());
+                    generalUser.setRole(setAuthorityToListAuthority(user.getAuthorities()));
+                    generalUser.setEmail(login.getEmail());
+                    return generalUser;
+                })
+                .toList();
+    }
+
     @Transactional
     @Override
     public BasicResponseDto signup(RegisterUserDto newUserData) {
         System.out.println("signup repo");
         Login loginUserEmail = loginRepository.findLoginByEmail(newUserData.getEmail());
-        if(loginUserEmail!=null) {
-            return new BasicResponseDto("User with this email already exits.",false);
+        if (loginUserEmail != null) {
+            return new BasicResponseDto("User with this email already exits.", false);
         }
 
         Login login = modelMapper.map(newUserData, Login.class);
@@ -152,7 +177,7 @@ public class UserServiceImplement implements UserServiceInterfaces {
 
         userRepository.save(user);
 
-        return new BasicResponseDto("New user added successfully.",true);
+        return new BasicResponseDto("New user added successfully.", true);
 
     }
 
@@ -164,7 +189,7 @@ public class UserServiceImplement implements UserServiceInterfaces {
         User updateThisUser = getUserById(newUserData.getUserId());
         Login updateThisUserEmail = loginRepository.findLoginById(newUserData.getUserId());
 
-        if(userAuth == null || updateThisUser == null) {
+        if (userAuth == null || updateThisUser == null) {
             throw new NoSuchElementException("User not found");
         }
 
@@ -174,14 +199,13 @@ public class UserServiceImplement implements UserServiceInterfaces {
 //		User loggedInUser = userRepository.findUserByEmail(userAuth.getEmail());
 //		User newUserEmail = userRepository.findUserByEmail(newUserData.getEmail());
 
-        if(!loggedInUser.getId().equals(newUserData.getUserId())) {
+        if (!loggedInUser.getId().equals(newUserData.getUserId())) {
             throw new AccessDeniedException("Cannot update this user");
         }
 
-        if(newUserEmail == null) {
+        if (newUserEmail == null) {
 
-        }
-        else if(!newUserData.getEmail().equals(loggedInUser.getEmail()) && newUserData.getEmail().equals(newUserEmail.getEmail())) {
+        } else if (!newUserData.getEmail().equals(loggedInUser.getEmail()) && newUserData.getEmail().equals(newUserEmail.getEmail())) {
             throw new DuplicateKeyException("Cannot update. This email already in use");
         }
         updateThisUserEmail.setEmail(newUserData.getEmail());
@@ -191,7 +215,7 @@ public class UserServiceImplement implements UserServiceInterfaces {
         userRepository.save(updateThisUser);
         loginRepository.save(updateThisUserEmail);
 
-        return new BasicResponseDto("User updated successfully.",true);
+        return new BasicResponseDto("User updated successfully.", true);
     }
 
     @Override
@@ -200,7 +224,7 @@ public class UserServiceImplement implements UserServiceInterfaces {
         userLogin.setPassword(password);
         loginRepository.save(userLogin);
 
-        return new BasicResponseDto("Password updated successfully.",true);
+        return new BasicResponseDto("Password updated successfully.", true);
     }
 
     @Override
@@ -210,22 +234,43 @@ public class UserServiceImplement implements UserServiceInterfaces {
 
             Set<Authority> userAuthorities = user.getAuthorities();
             Authority newUserAuthority = authorityRepository.findAuthorityByName("editor");
+            Authority userAuthorityRequestEditor = authorityRepository.findAuthorityByName("request editor");
             userAuthorities.add(newUserAuthority);
+            userAuthorities.remove(userAuthorityRequestEditor);
             user.setAuthorities(userAuthorities);
-
             userRepository.save(user);
+        } catch (Exception e) {
+            return new BasicResponseDto("Unable to update user authority for id: " + userAuthority.getUserId(), false);
         }
-        catch(Exception e) {
-            return new BasicResponseDto ("Unable to update user authority for id: "+ userAuthority.getUserId(),false);
+        return new BasicResponseDto("User authority updated successfully.", true);
+    }
+
+    @Override
+    public BasicResponseDto requestEditorAccess() {
+        UserAuth userAuth = (UserAuth) SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("userAuth.toString(): "+userAuth);
+        if (userAuth == null) {
+            throw new NoSuchElementException("user not found.");
         }
-        return new BasicResponseDto("User authority updated successfully.",true);
+
+        Login login = loginRepository.findLoginByEmail(userAuth.getEmail());
+        Optional<User> user = Optional.ofNullable(userRepository.findUserById(login.getId()));
+        if (user.isEmpty()) throw new NoSuchElementException("User not found");
+
+        Set<Authority> userAuthorities = user.get().getAuthorities();
+        Authority newUserAuthority = authorityRepository.findAuthorityByName("request editor");
+        userAuthorities.add(newUserAuthority);
+        user.get().setAuthorities(userAuthorities);
+
+        userRepository.save(user.get());
+        return new BasicResponseDto("Requested for editor role.", true);
     }
 
     @Override
     public BasicResponseDto deleteMyAccount() {
         UserAuth userAuth = (UserAuth) SecurityContextHolder.getContext().getAuthentication();
 
-        if(userAuth == null) {
+        if (userAuth == null) {
             throw new NoSuchElementException("user not found, cannot delete the user account");
         }
         Login deleteUserLogin = loginRepository.findLoginByEmail(userAuth.getEmail());
@@ -233,7 +278,7 @@ public class UserServiceImplement implements UserServiceInterfaces {
         loginRepository.delete(deleteUserLogin);
         userRepository.delete(deleteUser);
 
-        return new BasicResponseDto("Your account is deleted successfully.",true);
+        return new BasicResponseDto("Your account is deleted successfully.", true);
     }
 
     @Override
@@ -247,11 +292,10 @@ public class UserServiceImplement implements UserServiceInterfaces {
             user.setAuthorities(userAuthorities);
 
             userRepository.save(user);
+        } catch (Exception e) {
+            return new BasicResponseDto("Unable to remove user authority for id: " + userAuthority.getUserId(), false);
         }
-        catch(Exception e) {
-            return new BasicResponseDto ("Unable to remove user authority for id: "+ userAuthority.getUserId(),false);
-        }
-        return new BasicResponseDto("User authority removed successfully.",true);
+        return new BasicResponseDto("User authority removed successfully.", true);
     }
 
     public String encodePassword(String rawPassword) {
@@ -260,7 +304,7 @@ public class UserServiceImplement implements UserServiceInterfaces {
 
     public User getUserById(Long id) {
         User user = userRepository.findUserById(id);
-        if(user == null) {
+        if (user == null) {
             throw new NoSuchElementException("User not found");
         }
         return user;
@@ -268,13 +312,13 @@ public class UserServiceImplement implements UserServiceInterfaces {
 
     public Login getLoginById(Long id) {
         Login login = loginRepository.findLoginById(id);
-        if(login == null) {
+        if (login == null) {
             throw new NoSuchElementException("User not found");
         }
         return login;
     }
 
-    public List<String> setAuthorityToListAuthority(Set<Authority> setAuthority){
+    public List<String> setAuthorityToListAuthority(Set<Authority> setAuthority) {
         return setAuthority.stream()
                 .map(Authority::getName)
                 .collect(Collectors.toList());

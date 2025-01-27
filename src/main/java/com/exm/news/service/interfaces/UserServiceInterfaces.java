@@ -19,6 +19,9 @@ public interface UserServiceInterfaces {
 	public UserAuth authenticate(LoginUserDto input);
 	public LoginResponse getUserToken();
 	public GeneralUserDto getMe();
+	public List<GeneralUserDto> generalUserDtoListByRoleEditor();
+	public List<GeneralUserDto> generalUserDtoListByRoleRequestEditor();
+
 	
 //	[C]RUD
 	public BasicResponseDto signup(RegisterUserDto newUserData);
@@ -27,7 +30,8 @@ public interface UserServiceInterfaces {
 	public BasicResponseDto updateUser(UpdateUserDto newUserData);
 	public BasicResponseDto updateUserPassword(Long id,String password);
 	public BasicResponseDto updateUserAuthority(UpdateAuthorityDto userAuthority);
-	
+	public BasicResponseDto requestEditorAccess();
+
 //	CRU[D]
 	public BasicResponseDto deleteMyAccount();
 	public BasicResponseDto removeUserAuthority(UpdateAuthorityDto userAuthority);

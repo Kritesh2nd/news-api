@@ -12,3 +12,10 @@ public class NewsApiApplication {
 	}
 
 }
+
+/*
+main now
+entity > repository -> interface -> User Details -> (Filters) -> (exception handling) -> service -> controller
+drop database news; create database news; use news;
+mvn spring-boot:run
+*/

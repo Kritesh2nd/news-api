@@ -51,4 +51,23 @@ public class Article {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    public Article(String title, String shortContent, String imageUrl, String content, LocalDateTime publicationDate, User author, Category category) {
+        this.title = title;
+        this.shortContent = shortContent;
+        this.imageUrl = imageUrl;
+        this.content = content;
+        this.publicationDate = publicationDate;
+        this.author = author;
+        this.category = category;
+    }
+
+    public Article(String title, String shortContent, String imageUrl, String content, LocalDateTime publicationDate) {
+        this.title = title;
+        this.shortContent = shortContent;
+        this.imageUrl = imageUrl;
+        this.content = content;
+        this.publicationDate = publicationDate;
+    }
+
+
 }

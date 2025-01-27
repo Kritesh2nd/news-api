@@ -20,6 +20,7 @@ public interface ArticleService {
 	public List<MiniArticleDto> getMiniArticleImageList(ArticleRequest requestType);
 	public MainArticleDto getMainArticleById(Long articleId);
 	public List<MainArticleDto> getMainArticleList(ArticleRequest requestType);
+	public List<MainArticleDto> listArticleBySide(String side);
 	public byte[] getArticleImageById(Long imageId);
 
 	//	[C]RUD

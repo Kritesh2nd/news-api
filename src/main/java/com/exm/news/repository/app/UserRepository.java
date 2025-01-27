@@ -19,6 +19,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
 //
 //	@Query(nativeQuery = true, value="SELECT * FROM users u where u.email = :email")
 //	Optional<User> findUserByEmailOptonal(String email);
+
+	Optional<User> findByUsername(String username);
+
+	@Query("SELECT u FROM User u JOIN u.authorities a WHERE a.name = 'editor'")
+	List<User> findByAuthorityNameEditor();
+
+	@Query("SELECT u FROM User u JOIN u.authorities a WHERE a.name = 'request editor'")
+	List<User> findByAuthorityNameRequestEditor();
 	
 	@Query(nativeQuery = true, value="SELECT * FROM users u where u.id = :id")
 	User findUserById(Long id);

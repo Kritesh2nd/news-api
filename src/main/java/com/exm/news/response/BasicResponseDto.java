@@ -1,12 +1,13 @@
 package com.exm.news.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class BasicResponseDto {
 
 	private String message;

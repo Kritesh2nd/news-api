@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
 
 import com.exm.news.customRepo.app.ArticleRepoImplement;
 import com.exm.news.dto.article.*;
+import com.exm.news.entity.app.*;
 import com.exm.news.entity.auth.Login;
 import com.exm.news.model.ArticleRequest;
 import com.exm.news.repository.auth.LoginRepository;
@@ -24,11 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.exm.news.dto.user.GeneralUserDto;
-import com.exm.news.entity.app.Article;
-import com.exm.news.entity.app.ArticleImage;
-import com.exm.news.entity.app.Authority;
-import com.exm.news.entity.app.Category;
-import com.exm.news.entity.app.User;
 import com.exm.news.repository.app.ArticleImageRepository;
 import com.exm.news.repository.app.ArticleRepository;
 import com.exm.news.repository.app.CategoryRepository;
@@ -40,34 +37,38 @@ import com.exm.news.security.authentication.UserAuth;
 @Service
 public class ArticleServiceImplement implements ArticleService {
 
-	@Autowired
-	private ModelMapper modelMapper;
+    @Autowired
+    private ModelMapper modelMapper;
 
-	@Autowired
-	private ArticleRepository articleRepository;
+    @Autowired
+    private ArticleRepository articleRepository;
 
-	@Autowired
-	private ArticleRepoImplement articleRepoImplement;
+    @Autowired
+    private ArticleRepoImplement articleRepoImplement;
 
-	@Autowired
-	private ArticleImageRepository articleImageRepository;
+    @Autowired
+    private ArticleImageRepository articleImageRepository;
 
-	@Autowired
-	private UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-	@Autowired
-	private LoginRepository loginRepository;
+    @Autowired
+    private LoginRepository loginRepository;
 
-	@Autowired
-	private CategoryRepository categoryRepository;
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+
+    @Autowired
+    private NewsViewServiceImpl newsViewService;
 
     @Override
-    public Integer getArticleCount(){
+    public Integer getArticleCount() {
         return articleRepoImplement.getArticleCount();
     }
 
     @Override
-    public List<MiniArticleDto> setSearchResult(String keyWord){
+    public List<MiniArticleDto> setSearchResult(String keyWord) {
         return articleRepoImplement.getSearchResultTitle(keyWord);
     }
 
@@ -102,7 +103,29 @@ public class ArticleServiceImplement implements ArticleService {
     }
 
     @Override
-    public byte[] getArticleImageById(Long imageId){
+    public List<MainArticleDto> listArticleBySide(String side) {
+        List<NewsView> newsViewList = newsViewService.listNewsViewBySide(side);
+        if (newsViewList.isEmpty()) return List.of();
+
+        List<MainArticleDto> mainArticleDtoList = newsViewList.stream().map(
+                newsView -> {
+                    Article article = articleRepository.findArticleById(newsView.getId());
+                    MainArticleDto mainArticleDto = modelMapper.map(article, MainArticleDto.class);
+                    mainArticleDto.setAuthorFirstName(article.getAuthor().getFirstName());
+                    mainArticleDto.setAuthorLastName(article.getAuthor().getLastName());
+                    Date publishedDate = Date.from(article.getPublicationDate().atZone(ZoneId.systemDefault()).toInstant());
+                    mainArticleDto.setPublishedDate(publishedDate);
+                    mainArticleDto.setCategoryName(article.getCategory().getCategoryName());
+                    return mainArticleDto;
+                }
+        ).toList();
+
+
+        return mainArticleDtoList;
+    }
+
+    @Override
+    public byte[] getArticleImageById(Long imageId) {
         //http://localhost:8080/article/image/1
 
         if (imageId == null || imageId < 1) {
@@ -110,7 +133,7 @@ public class ArticleServiceImplement implements ArticleService {
         }
         List<ArticleImage> articleImages = articleImageRepository.findImagesByImageId(imageId);
 
-        if(articleImages.isEmpty()) {
+        if (articleImages.isEmpty()) {
             throw new NoSuchElementException("Image not found");
         }
 
@@ -129,8 +152,8 @@ public class ArticleServiceImplement implements ArticleService {
 
         Category articleCategory = categoryRepository.findByCategoryName(newArticle.getCategory());
 
-        if(articleCategory == null) {
-            throw new NoSuchElementException("Category not found: "+newArticle.getCategory());
+        if (articleCategory == null) {
+            throw new NoSuchElementException("Category not found: " + newArticle.getCategory());
         }
 
         Article lastArticle = articleRepository.findLastArticle();
@@ -140,19 +163,19 @@ public class ArticleServiceImplement implements ArticleService {
         article.setCategory(articleCategory);
         article.setPublicationDate(LocalDateTime.now());
 
-        article.setImageUrl("http://localhost:8080/article/image/"+imageId);
+        article.setImageUrl("http://localhost:8080/article/image/" + imageId);
 
         articleRepository.save(article);
 
-        return new BasicResponseDto("New article added successfully",true);
+        return new BasicResponseDto("New article added successfully", true);
     }
 
     @Override
     public BasicResponseDto writeAllArticle(List<WriteArticle> articles) {
-        for(WriteArticle a : articles) {
+        for (WriteArticle a : articles) {
             writeArticle(a);
         }
-        return new BasicResponseDto("All articles added successfully.",true);
+        return new BasicResponseDto("All articles added successfully.", true);
     }
 
     @Override
@@ -162,21 +185,21 @@ public class ArticleServiceImplement implements ArticleService {
 
         List<ArticleImage> articleImages = new ArrayList<ArticleImage>();
 
-        for(MultipartFile file : files) {
-            System.out.println("file type: "+file.getContentType());
+        for (MultipartFile file : files) {
+            System.out.println("file type: " + file.getContentType());
             String imgFile = Base64.getEncoder().encodeToString(file.getBytes());
-            ArticleImage articleImage = new ArticleImage(Long.valueOf(0),imgFile,LastArticle);
+            ArticleImage articleImage = new ArticleImage(Long.valueOf(0), imgFile, LastArticle);
             articleImages.add(articleImage);
         }
 
         articleImageRepository.saveAll(articleImages);
-        return new BasicResponseDto("New article added with image successfully",true);
+        return new BasicResponseDto("New article added with image successfully", true);
     }
 
     @Override
     public BasicResponseDto editArticle(UpdateArticle updateArticle, MultipartFile... files) throws IOException {
         Article findArticle = getArticleById(updateArticle.getArticleId());
-        if(findArticle == null){
+        if (findArticle == null) {
             throw new NoSuchElementException("Article not found");
         }
         Article updateArticleData = modelMapper.map(updateArticle, Article.class);
@@ -186,23 +209,23 @@ public class ArticleServiceImplement implements ArticleService {
         String categoryName = updateArticle.getCategory();
 
         Category articleCategory = categoryRepository.findByCategoryName(categoryName);
-        if(articleCategory == null) {
+        if (articleCategory == null) {
             throw new NoSuchElementException("Category not found");
         }
         updateArticleData.setAuthor(articleAuthor);
         updateArticleData.setCategory(articleCategory);
         updateArticleData.setPublicationDate(LocalDateTime.now());
-        updateArticleData.setImageUrl("http://localhost:8080/article/image/"+updateArticleData.getArticleId());
+        updateArticleData.setImageUrl("http://localhost:8080/article/image/" + updateArticleData.getArticleId());
         articleRepository.save(updateArticleData);
         if (files != null && files.length > 0) {
             Article LastArticle = articleRepository.findLastArticle();
             List<ArticleImage> articleImages = new ArrayList<ArticleImage>();
 
-            for(MultipartFile file : files) {
-                System.out.println("file type: "+file.getContentType());
+            for (MultipartFile file : files) {
+                System.out.println("file type: " + file.getContentType());
                 String imgFile = Base64.getEncoder().encodeToString(file.getBytes());
 //                ArticleImage articleImage = new ArticleImage(Long.valueOf(0),imgFile,LastArticle);
-                ArticleImage articleImage = new ArticleImage(LastArticle.getArticleId(),imgFile,LastArticle);
+                ArticleImage articleImage = new ArticleImage(LastArticle.getArticleId(), imgFile, LastArticle);
                 articleImages.add(articleImage);
 
             }
@@ -210,31 +233,31 @@ public class ArticleServiceImplement implements ArticleService {
             articleImageRepository.saveAll(articleImages);
         }
 
-        return new BasicResponseDto("Article updated successfully",true);
+        return new BasicResponseDto("Article updated successfully", true);
     }
 
-    public BasicResponseDto updateArticle(UpdateArticle updateArticle){
+    public BasicResponseDto updateArticle(UpdateArticle updateArticle) {
         articleRepoImplement.updateArticleQuery(updateArticle);
-        return new BasicResponseDto("Article updated successfully",true);
+        return new BasicResponseDto("Article updated successfully", true);
     }
 
     @Override
     public BasicResponseDto deleteArticleById(Long id) {
-        Article deleteArticle= getArticleById(id);
+        Article deleteArticle = getArticleById(id);
         articleRepository.delete(deleteArticle);
 
-        return new BasicResponseDto("Article deleted successfully.",true);
+        return new BasicResponseDto("Article deleted successfully.", true);
     }
 
     @Override
     public BasicResponseDto deleteAllArticles() {
         articleRepository.deleteAll();
-        return new BasicResponseDto("All articles deleted successfully.",true);
+        return new BasicResponseDto("All articles deleted successfully.", true);
     }
 
     public Article getArticleById(Long id) {
         Article article = articleRepository.findArticleById(id);
-        if(article == null) {
+        if (article == null) {
             throw new NoSuchElementException("Article not found");
         }
         return article;
@@ -247,7 +270,7 @@ public class ArticleServiceImplement implements ArticleService {
             LocalDate.parse(dateStr, formatter);
             return true;
         } catch (DateTimeParseException e) {
-            throw new DateTimeException("Error in date time format: "+e);
+            throw new DateTimeException("Error in date time format: " + e);
         }
     }
 
@@ -268,8 +291,9 @@ public class ArticleServiceImplement implements ArticleService {
 
         if (matcher.find()) {
             return matcher.group(1);
+        } else {
+            return null;
         }
-        else {return null;}
     }
 
 }
