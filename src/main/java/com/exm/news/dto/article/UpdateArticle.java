@@ -27,4 +27,5 @@ public class UpdateArticle {
 
     private String category;
 
+    private boolean updateImage;
 }

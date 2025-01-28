@@ -59,6 +59,9 @@ public class UserServiceImplement implements UserServiceInterfaces {
     @Autowired
     private LoginRepoImplement customLoginRepository;
 
+    @Autowired
+    private EmailServiceImpl emailService;
+
     public List<LoginUserDto> findLoginByEmailCus(String email) {
         List<Login> loginEmails = customLoginRepository.findLoginSameEmail(email);
 
@@ -235,12 +238,40 @@ public class UserServiceImplement implements UserServiceInterfaces {
             Set<Authority> userAuthorities = user.getAuthorities();
             Authority newUserAuthority = authorityRepository.findAuthorityByName("editor");
             Authority userAuthorityRequestEditor = authorityRepository.findAuthorityByName("request editor");
+
+            Login login = loginRepository.findLoginById(user.getUserId());
+
             userAuthorities.add(newUserAuthority);
             userAuthorities.remove(userAuthorityRequestEditor);
             user.setAuthorities(userAuthorities);
             userRepository.save(user);
+
+            emailService.sendSimpleMail(login.getEmail());
         } catch (Exception e) {
             return new BasicResponseDto("Unable to update user authority for id: " + userAuthority.getUserId(), false);
+        }
+        return new BasicResponseDto("User authority updated successfully.", true);
+    }
+
+    @Override
+    public BasicResponseDto updateUserAuthority(Long userId) {
+        try {
+            User user = getUserById(userId);
+
+            Set<Authority> userAuthorities = user.getAuthorities();
+            Authority newUserAuthority = authorityRepository.findAuthorityByName("editor");
+            Authority userAuthorityRequestEditor = authorityRepository.findAuthorityByName("request editor");
+
+            Login login = loginRepository.findLoginById(user.getUserId());
+
+            userAuthorities.add(newUserAuthority);
+            userAuthorities.remove(userAuthorityRequestEditor);
+            user.setAuthorities(userAuthorities);
+            userRepository.save(user);
+
+            emailService.sendSimpleMail(login.getEmail());
+        } catch (Exception e) {
+            return new BasicResponseDto("Unable to update user authority for id: " + userId, false);
         }
         return new BasicResponseDto("User authority updated successfully.", true);
     }

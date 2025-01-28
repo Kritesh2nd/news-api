@@ -215,9 +215,13 @@ public class ArticleServiceImplement implements ArticleService {
         updateArticleData.setAuthor(articleAuthor);
         updateArticleData.setCategory(articleCategory);
         updateArticleData.setPublicationDate(LocalDateTime.now());
-        updateArticleData.setImageUrl("http://localhost:8080/article/image/" + updateArticleData.getArticleId());
+        updateArticleData.setImageUrl(findArticle.getImageUrl());
+        if(updateArticle.isUpdateImage()){
+            updateArticleData.setImageUrl("http://localhost:8080/article/image/" + updateArticleData.getArticleId());
+        }
         articleRepository.save(updateArticleData);
-        if (files != null && files.length > 0) {
+
+        if (updateArticle.isUpdateImage() && files != null && files.length > 0) {
             Article LastArticle = articleRepository.findLastArticle();
             List<ArticleImage> articleImages = new ArrayList<ArticleImage>();
 

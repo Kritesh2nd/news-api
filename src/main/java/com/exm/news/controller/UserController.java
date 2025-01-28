@@ -2,6 +2,7 @@ package com.exm.news.controller;
 
 import java.util.List;
 
+import com.exm.news.service.EmailServiceImpl;
 import com.exm.news.service.NewsViewServiceImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,9 @@ public class UserController {
 
     @Autowired
     private NewsViewServiceImpl newsViewService;
+
+    @Autowired
+    private EmailServiceImpl emailService;
 
     @GetMapping(PathConstant.CAT)
     public ResponseEntity<String> cat() {
@@ -59,6 +63,16 @@ public class UserController {
                 userService.updateUserAuthority(userAuthority), HttpStatus.OK
         );
     }
+    //updateUserAuthority
+
+    @PreAuthorize("hasAnyAuthority('admin')")
+    @GetMapping("updateAuthorityEditor/{id}")
+    public ResponseEntity<BasicResponseDto> updateUserRole(@PathVariable Long id) {
+        System.out.println("updateAuthorityEditor id:"+id);
+        return new ResponseEntity<BasicResponseDto>(
+                userService.updateUserAuthority(id), HttpStatus.OK
+        );
+    }
 
     @PreAuthorize("hasAnyAuthority('reader')")
     @PostMapping(PathConstant.DELETE_ME)
@@ -88,7 +102,7 @@ public class UserController {
     }
 
     @PreAuthorize("hasAnyAuthority('admin','editor','reader')")
-    @PostMapping("request-editor-role")
+    @GetMapping("request-editor-role")
     public ResponseEntity<BasicResponseDto> requestEditorRole() {
         BasicResponseDto basicResponseDto = userService.requestEditorAccess();
         return new ResponseEntity<>(basicResponseDto, HttpStatus.OK);
@@ -106,6 +120,11 @@ public class UserController {
         return new ResponseEntity<>("testt", HttpStatus.OK);
     }
 
-
+    @PreAuthorize("hasAnyAuthority('admin')")
+    @GetMapping("send-mail")
+    public ResponseEntity<String> sendMail() {
+        emailService.sendSimpleMail("herethapamagar@gmail.com");
+        return new ResponseEntity<>("email sent", HttpStatus.OK);
+    }
 
 }

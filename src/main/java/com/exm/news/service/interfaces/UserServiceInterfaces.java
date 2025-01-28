@@ -30,6 +30,7 @@ public interface UserServiceInterfaces {
 	public BasicResponseDto updateUser(UpdateUserDto newUserData);
 	public BasicResponseDto updateUserPassword(Long id,String password);
 	public BasicResponseDto updateUserAuthority(UpdateAuthorityDto userAuthority);
+	public BasicResponseDto updateUserAuthority(Long userId);
 	public BasicResponseDto requestEditorAccess();
 
 //	CRU[D]
